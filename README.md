@@ -16,4 +16,4 @@ Click the gear icon to customize tile groups, dimensions, colors, and limits.
 
 ## Play
 
-[Launch the game](https://YOUR-USERNAME.github.io/larissa-tiles/)
+[Launch the game](https://card3d-studio.github.io/larissa-tiles/)
