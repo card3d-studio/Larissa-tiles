@@ -56,8 +56,15 @@ a{color:inherit}
 
 /* ── Canvas ── */
 #canvas-wrap{border:0.5px solid #c5c3b9;border-radius:8px;background:#e8e6e0;display:inline-block;max-width:100%;overflow:auto}
-canvas{display:block;cursor:crosshair}
+canvas{display:block;cursor:crosshair;touch-action:none;-webkit-tap-highlight-color:transparent}
 .hint{font-size:11px;color:#aaa;margin-top:2px}
+/* Larger tap targets on mobile */
+@media(max-width:600px){
+  .icon-btn{padding:8px 10px}
+  .tbtn{padding:8px 12px;font-size:13px}
+  .abtn{padding:8px 12px;font-size:13px}
+  .pbtn{padding:8px 14px;font-size:13px}
+}
 
 /* ── Stats bar ── */
 #sbar{display:flex;gap:0;flex-wrap:wrap;border:0.5px solid #c5c3b9;border-radius:8px;overflow:hidden;background:#fff;width:100%}
@@ -488,17 +495,57 @@ function hideMsg(){document.getElementById('msg').style.display='none';}
 const canvas=document.getElementById('c');
 const ctx=canvas.getContext('2d');
 
-function canvasXY(e){
-  const r=canvas.getBoundingClientRect();
-  const touch=e.touches?e.touches[0]:e;
-  return[touch.clientX-r.left, touch.clientY-r.top];
+// Track touch start position to distinguish tap vs drag
+let touchStartX=0, touchStartY=0, touchMoved=false;
+const DRAG_THRESHOLD=8; // pixels before we consider it a drag
+
+function clientXY(e){
+  // Works for both mouse and touch events, including touchend where touches[] is empty
+  if(e.touches && e.touches.length>0) return [e.touches[0].clientX, e.touches[0].clientY];
+  if(e.changedTouches && e.changedTouches.length>0) return [e.changedTouches[0].clientX, e.changedTouches[0].clientY];
+  return [e.clientX, e.clientY];
 }
+
+function canvasXY(e){
+  const rect=canvas.getBoundingClientRect();
+  const [cx,cy]=clientXY(e);
+  return [cx-rect.left, cy-rect.top];
+}
+
 function cellFromXY(x,y){return[Math.floor(y/S),Math.floor(x/S)];}
 
-canvas.addEventListener('mousedown',onDown);
-canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+// ── Mouse events ──
+canvas.addEventListener('mousedown', e=>{ onDown(e,false); });
+window.addEventListener('mousemove', e=>{ onMove(e,false); });
+window.addEventListener('mouseup',   e=>{ onUp(e,false); });
 
-function onDown(e){
+// ── Touch events ──
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const [cx,cy]=clientXY(e);
+  touchStartX=cx; touchStartY=cy; touchMoved=false;
+  onDown(e,true);
+},{passive:false});
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  const [cx,cy]=clientXY(e);
+  const dx=cx-touchStartX, dy=cy-touchStartY;
+  if(Math.sqrt(dx*dx+dy*dy)>DRAG_THRESHOLD) touchMoved=true;
+  onMove(e,true);
+},{passive:false});
+
+canvas.addEventListener('touchend', e=>{
+  e.preventDefault();
+  onUp(e,true);
+},{passive:false});
+
+canvas.addEventListener('touchcancel', e=>{
+  e.preventDefault();
+  cancelDrag();
+},{passive:false});
+
+function onDown(e, isTouch){
   const[x,y]=canvasXY(e);
   const[r,c]=cellFromXY(x,y);
   if(r<0||r>=ROWS||c<0||c>=COLS) return;
@@ -507,16 +554,13 @@ function onDown(e){
     const t=placed[id];
     unstamp(t);
     drag={id,grabOffR:r-t.r,grabOffC:c-t.c,curR:t.r,curC:t.c,valid:true};
-    canvas.style.cursor='grabbing';
+    if(!isTouch) canvas.style.cursor='grabbing';
   } else {
     drag={id:-1,curR:r,curC:c};
   }
 }
 
-window.addEventListener('mousemove',onMove);
-window.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
-
-function onMove(e){
+function onMove(e, isTouch){
   const[x,y]=canvasXY(e);
   const[r,c]=cellFromXY(x,y);
   hoverR=r; hoverC=c;
@@ -529,22 +573,38 @@ function onMove(e){
   render();
 }
 
-window.addEventListener('mouseup',onUp);
-window.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
-
-function onUp(e){
-  canvas.style.cursor='crosshair';
+function onUp(e, isTouch){
+  if(!isTouch) canvas.style.cursor='crosshair';
   if(!drag){render();return;}
+
+  // On touch: if finger barely moved, treat as a tap (place tile)
+  if(isTouch && !touchMoved && drag.id===-1){
+    const[r,c]=[drag.curR,drag.curC];
+    drag=null;
+    if(r>=0&&r<ROWS&&c>=0&&c<COLS&&grid[r][c]===-1) placeTile(r,c);
+    render(); return;
+  }
+
   if(drag.id===-1){
     const[r,c]=[drag.curR,drag.curC];
     drag=null;
     if(r>=0&&r<ROWS&&c>=0&&c<COLS&&grid[r][c]===-1) placeTile(r,c);
     render(); return;
   }
+
   const t=placed[drag.id];
   const nr=drag.curR, nc=drag.curC;
+
+  // On touch: if barely moved, put tile back (was a tap on existing tile, not a drag)
+  if(isTouch && !touchMoved){
+    stamp(t,t.id);
+    drag=null; render(); return;
+  }
+
   const offGrid=nr<0||nc<0||nr+t.h>ROWS||nc+t.w>COLS;
-  if(offGrid){t.deleted=true;drag=null;hideMsg();updateStats();render();return;}
+  if(offGrid){
+    t.deleted=true; drag=null; hideMsg(); updateStats(); render(); return;
+  }
   if(canPlace(nr,nc,t.h,t.w,t.id)){t.r=nr;t.c=nc;}
   stamp(t,t.id);
   drag=null; hideMsg(); updateStats(); render(); checkWin();
