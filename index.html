@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Larissa Tiles</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#F1EFE8;color:#2C2C2A;min-height:100vh}
+a{color:inherit}
+
+/* ── Top bar ── */
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:0.5px solid #d3d1c7;position:sticky;top:0;z-index:100}
+#topbar h1{font-size:17px;font-weight:600;letter-spacing:.02em;color:#2C2C2A}
+#timer-display{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;color:#2C2C2A;min-width:80px;text-align:center}
+#timer-display.running{color:#0F6E56}
+#timer-display.stopped{color:#888}
+.top-btns{display:flex;gap:8px;align-items:center}
+.icon-btn{background:none;border:0.5px solid #d3d1c7;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:13px;color:#444;display:flex;align-items:center;gap:4px}
+.icon-btn:hover{background:#f1efe8}
+.icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Layout ── */
+#main{display:flex;flex-direction:column;align-items:flex-start;padding:12px 16px;gap:10px}
+
+/* ── Presets ── */
+.preset-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.preset-row span{font-size:12px;color:#888}
+.pbtn{padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;border:0.5px solid #c5c3b9;background:#fff;color:#2C2C2A;transition:all .12s}
+.pbtn:hover{background:#f1efe8}
+.pbtn.active{background:#2C2C2A;color:#fff;border-color:#2C2C2A}
+
+/* ── Custom size ── */
+.custom-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.custom-row label{font-size:12px;color:#888}
+.custom-row input[type=number]{width:52px;font-size:13px;padding:4px 6px;border:0.5px solid #c5c3b9;border-radius:6px;background:#fff}
+.custom-row button{padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;border:0.5px solid #c5c3b9;background:#fff;color:#2C2C2A}
+.custom-row button:hover{background:#f1efe8}
+
+/* ── Palette ── */
+.palette{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.palette-label{font-size:12px;color:#888;margin-right:2px}
+.tbtn{padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .12s;user-select:none;display:flex;align-items:center;gap:5px}
+.tbtn:hover{opacity:.85}
+.tbtn.selected{border-color:#2C2C2A !important;font-weight:600}
+.tbtn:disabled{opacity:.35;cursor:not-allowed}
+.tbtn .badge{font-size:10px;padding:1px 5px;border-radius:4px;font-weight:600;background:rgba(0,0,0,.12);min-width:18px;text-align:center}
+
+/* ── Action row ── */
+.action-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.abtn{padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;border:0.5px solid #c5c3b9;background:#fff;color:#2C2C2A}
+.abtn:hover{background:#f1efe8}
+#msg{font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid;display:none}
+#msg.ok{color:#0F6E56;background:#E1F5EE;border-color:#5DCAA5}
+#msg.err{color:#993C1D;background:#FAECE7;border-color:#F0997B}
+
+/* ── Canvas ── */
+#canvas-wrap{border:0.5px solid #c5c3b9;border-radius:8px;background:#e8e6e0;display:inline-block;max-width:100%;overflow:auto}
+canvas{display:block;cursor:crosshair}
+.hint{font-size:11px;color:#aaa;margin-top:2px}
+
+/* ── Stats bar ── */
+#sbar{display:flex;gap:0;flex-wrap:wrap;border:0.5px solid #c5c3b9;border-radius:8px;overflow:hidden;background:#fff;width:100%}
+.scard{flex:1;min-width:72px;padding:7px 10px;border-right:0.5px solid #d3d1c7}
+.scard:last-child{border-right:none}
+.scard .slabel{font-size:10px;color:#888;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scard .sval{font-size:14px;font-weight:600;color:#2C2C2A}
+.scard .ssub{font-size:10px;color:#aaa}
+.scard.over .sval{color:#A32D2D}
+.scard.over .slabel{color:#A32D2D}
+
+/* ── Modals ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:14px;border:0.5px solid #c5c3b9;width:380px;max-width:calc(100vw - 32px);max-height:calc(100vh - 60px);overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.14)}
+.modal-head{font-size:15px;font-weight:600;padding:14px 16px 12px;border-bottom:0.5px solid #e8e6e0;display:flex;justify-content:space-between;align-items:center;color:#2C2C2A}
+.modal-head button{background:none;border:none;font-size:18px;cursor:pointer;color:#888;line-height:1}
+.modal-head button:hover{color:#2C2C2A}
+.modal-body{padding:16px}
+.help-section{display:flex;flex-direction:column;gap:10px}
+.help-step{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#444;line-height:1.55}
+.help-step strong{color:#2C2C2A}
+.step-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#2C2C2A;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+kbd{display:inline-block;padding:1px 5px;font-size:11px;border:0.5px solid #c5c3b9;border-radius:4px;background:#f8f7f4;font-family:inherit;color:#444}
+
+#settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:flex-start;justify-content:flex-end;padding:56px 16px 0}
+#settings-overlay.open{display:flex}
+#settings-panel{background:#fff;border-radius:12px;border:0.5px solid #c5c3b9;width:380px;max-width:calc(100vw - 32px);max-height:calc(100vh - 80px);overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+#settings-panel h2{font-size:15px;font-weight:600;padding:14px 16px 10px;border-bottom:0.5px solid #e8e6e0;display:flex;justify-content:space-between;align-items:center}
+#settings-panel h2 button{background:none;border:none;font-size:18px;cursor:pointer;color:#888;line-height:1}
+.settings-section{padding:12px 16px;border-bottom:0.5px solid #f1efe8}
+.settings-section h3{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.group-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.group-row label{font-size:12px;color:#555;min-width:80px}
+.group-row input[type=number]{width:46px;font-size:12px;padding:4px 6px;border:0.5px solid #c5c3b9;border-radius:5px}
+.group-row input[type=color]{width:34px;height:28px;border:0.5px solid #c5c3b9;border-radius:5px;cursor:pointer;padding:1px}
+.group-row .del-btn{background:none;border:0.5px solid #e8c5c5;color:#A32D2D;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer}
+.group-row .del-btn:hover{background:#FAECE7}
+.group-header{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.group-tile-preview{width:32px;height:20px;border-radius:4px;border:1.5px solid;display:inline-block;vertical-align:middle;margin-right:4px}
+.add-group-btn{padding:5px 12px;font-size:12px;border-radius:6px;cursor:pointer;border:0.5px solid #c5c3b9;background:#f8f7f4;color:#2C2C2A;margin-top:4px}
+.add-group-btn:hover{background:#f1efe8}
+.settings-apply{display:block;width:calc(100% - 32px);margin:12px 16px;padding:8px;font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;border:none;background:#2C2C2A;color:#fff}
+.settings-apply:hover{background:#444}
+.field-label{font-size:11px;color:#aaa;text-align:center;margin-bottom:2px}
+.field-group{display:flex;flex-direction:column;align-items:center;gap:2px}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Larissa Tiles</h1>
+  <div id="timer-display" class="stopped">0:00</div>
+  <div class="top-btns">
+    <button class="icon-btn" onclick="resetTimer()" title="Reset timer">
+      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="icon-btn" onclick="openModal('about-modal')" title="About">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      About
+    </button>
+    <button class="icon-btn" onclick="openModal('help-modal')" title="How to play">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      How to play
+    </button>
+    <button class="icon-btn" onclick="openSettings()" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<div id="main">
+  <div class="preset-row">
+    <span>Preset:</span>
+    <button class="pbtn" id="pre-a" onclick="applyPreset(11,16)">11 × 16</button>
+    <button class="pbtn active" id="pre-b" onclick="applyPreset(12,15)">12 × 15</button>
+    <button class="pbtn" id="pre-c" onclick="applyPreset(13,15)">13 × 15</button>
+  </div>
+  <div class="custom-row">
+    <label>Width:</label>
+    <input type="number" id="inp-w" value="12" min="2" max="40">
+    <label>Height:</label>
+    <input type="number" id="inp-h" value="15" min="2" max="40">
+    <button onclick="initGrid()">New grid</button>
+  </div>
+
+  <div class="palette" id="palette">
+    <span class="palette-label">Place:</span>
+  </div>
+
+  <div class="action-row">
+    <button class="abtn" onclick="undoLast()">↩ Undo</button>
+    <button class="abtn" onclick="clearGrid()">✕ Clear</button>
+    <button class="abtn" onclick="checkFaults()">⚡ Check lines</button>
+    <span id="msg"></span>
+  </div>
+
+  <div id="canvas-wrap"><canvas id="c"></canvas></div>
+  <div class="hint">Click to place · Drag to move · Drag off-grid or Del to delete</div>
+
+  <div id="sbar"></div>
+</div>
+
+<!-- About modal -->
+<div id="about-modal" class="modal-overlay" onclick="maybeCloseModal(event,'about-modal')">
+  <div class="modal-box">
+    <div class="modal-head">About <button onclick="closeModal('about-modal')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:15px;line-height:1.65;color:#2C2C2A">Larissa has 3 shapes of tiles and needs your help covering a rectangular grid. How fast can you complete the puzzle?</p>
+    </div>
+  </div>
+</div>
+
+<!-- How to play modal -->
+<div id="help-modal" class="modal-overlay" onclick="maybeCloseModal(event,'help-modal')">
+  <div class="modal-box">
+    <div class="modal-head">How to play <button onclick="closeModal('help-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="help-section">
+        <div class="help-step"><span class="step-num">1</span><span>Choose a <strong>preset grid</strong> (11×16, 12×15, or 13×15) or enter a custom size and tap <em>New grid</em>.</span></div>
+        <div class="help-step"><span class="step-num">2</span><span>Select a <strong>tile shape</strong> from the palette. Each group shows how many tiles remain.</span></div>
+        <div class="help-step"><span class="step-num">3</span><span><strong>Click</strong> an empty cell to place a tile. A green preview means it fits; red means it doesn't.</span></div>
+        <div class="help-step"><span class="step-num">4</span><span><strong>Drag</strong> a placed tile to move it. Drag it <strong>off the grid</strong> (or press <kbd>Del</kbd>) to remove it.</span></div>
+        <div class="help-step"><span class="step-num">5</span><span>Fill every cell. The <strong>timer</strong> starts on your first placement and stops when the grid is complete.</span></div>
+        <div class="help-step"><span class="step-num">6</span><span>Tap <strong>⚡ Check lines</strong> to see if any straight line passes cleanly between tiles — a perfect tiling has none.</span></div>
+      </div>
+      <div style="margin-top:14px;padding:10px 12px;background:#f1efe8;border-radius:8px;font-size:12px;color:#666;line-height:1.6">
+        <strong style="color:#2C2C2A">Tips</strong><br>
+        Use <em>↩ Undo</em> to remove the last tile placed.<br>
+        <em>✕ Clear</em> resets the board and the timer.<br>
+        Customize tile groups, colors, and limits in <em>Settings</em>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings overlay -->
+<div id="settings-overlay" onclick="maybeCloseSettings(event)">
+  <div id="settings-panel">
+    <h2>Settings <button onclick="closeSettings()">✕</button></h2>
+
+    <div class="settings-section">
+      <h3>Tile groups</h3>
+      <div id="groups-editor"></div>
+      <button class="add-group-btn" onclick="addGroup()">+ Add group</button>
+    </div>
+
+    <button class="settings-apply" onclick="applySettings()">Apply &amp; restart</button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let COLS=12, ROWS=15, S=36;
+let grid=[], placed=[];
+let curGroupIdx=0, curOrientation=0;
+let hoverR=-1, hoverC=-1;
+let drag=null;
+let gameStarted=false, timerInterval=null, elapsedSeconds=0;
+
+// groups: array of {label, rows, cols, limit, fill, stroke}
+// orientation 0 = as-is, 1 = transposed (if rows!=cols)
+let groups = [
+  {label:'1×2', rows:1, cols:2, limit:17, fill:'#B5D4F4', stroke:'#185FA5'},
+  {label:'2×2', rows:2, cols:2, limit:25, fill:'#9FE1CB', stroke:'#0F6E56'},
+  {label:'2×3', rows:2, cols:3, limit:11, fill:'#FAC775', stroke:'#854F0B'},
+];
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+function startTimer(){
+  if(timerInterval) return;
+  timerInterval=setInterval(()=>{
+    elapsedSeconds++;
+    updateTimerDisplay();
+  },1000);
+  document.getElementById('timer-display').className='running';
+}
+function stopTimer(){
+  clearInterval(timerInterval);
+  timerInterval=null;
+}
+function resetTimer(){
+  stopTimer();
+  elapsedSeconds=0;
+  gameStarted=false;
+  updateTimerDisplay();
+  document.getElementById('timer-display').className='stopped';
+}
+function updateTimerDisplay(){
+  const m=Math.floor(elapsedSeconds/60);
+  const s=elapsedSeconds%60;
+  document.getElementById('timer-display').textContent=m+':'+(s<10?'0':'')+s;
+}
+
+// ── Tile logic ─────────────────────────────────────────────────────────────
+function effectiveDims(gIdx, ori){
+  const g=groups[gIdx];
+  if(ori===0||(g.rows===g.cols)) return {h:g.rows, w:g.cols};
+  return {h:g.cols, w:g.rows};
+}
+
+function groupCount(gIdx){
+  return placed.filter(t=>!t.deleted&&t.gIdx===gIdx).length;
+}
+
+function canAddGroup(gIdx){
+  return groupCount(gIdx)<groups[gIdx].limit;
+}
+
+function computeS(){
+  const sw=Math.floor(Math.min(window.innerWidth-40,700)/COLS);
+  const sh=Math.floor(560/ROWS);
+  S=Math.max(14,Math.min(sw,sh,52));
+}
+
+function initGrid(){
+  COLS=Math.max(2,Math.min(40,parseInt(document.getElementById('inp-w').value)||12));
+  ROWS=Math.max(2,Math.min(40,parseInt(document.getElementById('inp-h').value)||15));
+  computeS();
+  grid=Array.from({length:ROWS},()=>new Array(COLS).fill(-1));
+  placed=[];
+  drag=null;
+  gameStarted=false;
+  stopTimer();
+  elapsedSeconds=0;
+  updateTimerDisplay();
+  document.getElementById('timer-display').className='stopped';
+  const canvas=document.getElementById('c');
+  canvas.width=COLS*S; canvas.height=ROWS*S;
+  hideMsg();
+  buildPalette();
+  updateStats();
+  render();
+}
+
+function applyPreset(w,h){
+  document.getElementById('inp-w').value=w;
+  document.getElementById('inp-h').value=h;
+  ['pre-a','pre-b','pre-c'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(w===11) document.getElementById('pre-a').classList.add('active');
+  else if(w===12) document.getElementById('pre-b').classList.add('active');
+  else if(w===13) document.getElementById('pre-c').classList.add('active');
+  initGrid();
+}
+
+function buildPalette(){
+  const pal=document.getElementById('palette');
+  pal.innerHTML='<span class="palette-label">Place:</span>';
+  groups.forEach((g,i)=>{
+    const isSquare=g.rows===g.cols;
+    const orientations=isSquare?1:2;
+    for(let ori=0;ori<orientations;ori++){
+      const {h,w}=effectiveDims(i,ori);
+      const key=`g${i}o${ori}`;
+      const label=isSquare?`${g.rows}×${g.rows}`:(ori===0?`${g.rows}×${g.cols} —`:`${g.cols}×${g.rows} |`);
+      const btn=document.createElement('button');
+      btn.className='tbtn'+(curGroupIdx===i&&curOrientation===ori?' selected':'');
+      btn.id='tbtn-'+key;
+      btn.disabled=!canAddGroup(i);
+      btn.style.background=g.fill;
+      btn.style.color=g.stroke;
+      btn.style.borderColor=g.stroke+'88';
+      btn.innerHTML=`${label} <span class="badge" id="badge-${key}">${g.limit-groupCount(i)}</span>`;
+      btn.onclick=()=>selTile(i,ori);
+      pal.appendChild(btn);
+    }
+  });
+
+}
+
+function selTile(gIdx,ori){
+  curGroupIdx=gIdx; curOrientation=ori;
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('selected'));
+  const key=`g${gIdx}o${ori}`;
+  const btn=document.getElementById('tbtn-'+key);
+  if(btn) btn.classList.add('selected');
+  render();
+}
+
+function rotateTile(){
+  const g=groups[curGroupIdx];
+  if(g.rows===g.cols){return;}
+  curOrientation=curOrientation===0?1:0;
+  selTile(curGroupIdx,curOrientation);
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if((e.key==='Delete'||e.key==='Backspace')&&drag&&drag.id!==-1) deleteDragged();
+  if(e.key==='z'&&(e.ctrlKey||e.metaKey)){e.preventDefault();undoLast();}
+  if(e.key==='Escape'&&drag) cancelDrag();
+});
+
+function canPlace(r,c,h,w,excludeId=-1){
+  if(r<0||c<0||r+h>ROWS||c+w>COLS) return false;
+  for(let dr=0;dr<h;dr++)
+    for(let dc=0;dc<w;dc++){
+      const id=grid[r+dr][c+dc];
+      if(id!==-1&&id!==excludeId) return false;
+    }
+  return true;
+}
+function stamp(t,id){
+  for(let dr=0;dr<t.h;dr++)
+    for(let dc=0;dc<t.w;dc++)
+      grid[t.r+dr][t.c+dc]=id;
+}
+function unstamp(t){
+  for(let dr=0;dr<t.h;dr++)
+    for(let dc=0;dc<t.w;dc++)
+      if(grid[t.r+dr][t.c+dc]===t.id) grid[t.r+dr][t.c+dc]=-1;
+}
+
+function placeTile(r,c){
+  if(!gameStarted){gameStarted=true;startTimer();}
+  const {h,w}=effectiveDims(curGroupIdx,curOrientation);
+  if(!canPlace(r,c,h,w)) return;
+  if(!canAddGroup(curGroupIdx)){showMsg('No more '+groups[curGroupIdx].label+' tiles left!','err');return;}
+  const id=placed.length;
+  const t={r,c,h,w,gIdx:curGroupIdx,id,deleted:false};
+  placed.push(t);
+  stamp(t,id);
+  hideMsg();
+  updateStats();
+  render();
+  checkWin();
+}
+
+function undoLast(){
+  for(let i=placed.length-1;i>=0;i--){
+    if(!placed[i].deleted){deleteById(i);return;}
+  }
+}
+function deleteById(id){
+  const t=placed[id]; if(!t||t.deleted) return;
+  unstamp(t); t.deleted=true;
+  hideMsg(); updateStats(); render();
+}
+function deleteDragged(){
+  if(!drag||drag.id===-1) return;
+  const t=placed[drag.id];
+  if(t&&!t.deleted){unstamp(t);t.deleted=true;}
+  drag=null; hideMsg(); updateStats(); render();
+}
+function cancelDrag(){
+  if(!drag) return;
+  if(drag.id!==-1){const t=placed[drag.id];if(t&&!t.deleted) stamp(t,t.id);}
+  drag=null; render();
+}
+function clearGrid(){
+  grid=Array.from({length:ROWS},()=>new Array(COLS).fill(-1));
+  placed.forEach(t=>t.deleted=true);
+  drag=null; resetTimer(); hideMsg(); updateStats(); render();
+}
+
+function checkFaults(){
+  const filled=placed.filter(t=>!t.deleted).reduce((s,t)=>s+t.h*t.w,0);
+  if(filled<ROWS*COLS){showMsg('Fill the grid first, then check lines.','err');return;}
+  const faults=[];
+  for(let r=1;r<ROWS;r++){
+    let cut=false;
+    for(let c=0;c<COLS;c++){
+      const id=grid[r][c];
+      if(id!==-1){const t=placed[id];if(t.r<r&&t.r+t.h>r){cut=true;break;}}
+    }
+    if(!cut) faults.push('H row '+r);
+  }
+  for(let c=1;c<COLS;c++){
+    let cut=false;
+    for(let r=0;r<ROWS;r++){
+      const id=grid[r][c];
+      if(id!==-1){const t=placed[id];if(t.c<c&&t.c+t.w>c){cut=true;break;}}
+    }
+    if(!cut) faults.push('V col '+c);
+  }
+  if(faults.length===0) showMsg('No fault lines — perfect tiling!','ok');
+  else showMsg('Fault lines: '+faults.slice(0,5).join(', ')+(faults.length>5?' …':''),'err');
+}
+
+function checkWin(){
+  const filled=placed.filter(t=>!t.deleted).reduce((s,t)=>s+t.h*t.w,0);
+  if(filled===ROWS*COLS){
+    stopTimer();
+    const m=Math.floor(elapsedSeconds/60), s=elapsedSeconds%60;
+    showMsg('Complete! Time: '+m+':'+(s<10?'0':'')+s,'ok');
+  }
+}
+
+function updateStats(){
+  const sbar=document.getElementById('sbar');
+  sbar.innerHTML='';
+  function card(label,val,sub,over=false){
+    const d=document.createElement('div');
+    d.className='scard'+(over?' over':'');
+    d.innerHTML=`<div class="slabel">${label}</div><div class="sval">${val}</div><div class="ssub">${sub}</div>`;
+    sbar.appendChild(d);
+  }
+  const filled=placed.filter(t=>!t.deleted).reduce((s,t)=>s+t.h*t.w,0);
+  card('Grid',COLS+'×'+ROWS,(COLS*ROWS)+' cells');
+  groups.forEach((g,i)=>{
+    const cnt=groupCount(i);
+    card(g.label+' tiles',cnt,'limit '+g.limit, cnt>g.limit);
+  });
+  card('Remaining',ROWS*COLS-filled,'cells');
+
+  // update palette badges and disabled state
+  groups.forEach((g,i)=>{
+    const isSquare=g.rows===g.cols;
+    const orientations=isSquare?1:2;
+    for(let ori=0;ori<orientations;ori++){
+      const key=`g${i}o${ori}`;
+      const btn=document.getElementById('tbtn-'+key);
+      const badge=document.getElementById('badge-'+key);
+      if(btn) btn.disabled=!canAddGroup(i);
+      if(badge) badge.textContent=g.limit-groupCount(i);
+    }
+  });
+}
+
+function showMsg(txt,cls){
+  const el=document.getElementById('msg');
+  el.textContent=txt; el.className=cls; el.style.display='inline-block';
+}
+function hideMsg(){document.getElementById('msg').style.display='none';}
+
+// ── Canvas interaction ─────────────────────────────────────────────────────
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+
+function canvasXY(e){
+  const r=canvas.getBoundingClientRect();
+  const touch=e.touches?e.touches[0]:e;
+  return[touch.clientX-r.left, touch.clientY-r.top];
+}
+function cellFromXY(x,y){return[Math.floor(y/S),Math.floor(x/S)];}
+
+canvas.addEventListener('mousedown',onDown);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+
+function onDown(e){
+  const[x,y]=canvasXY(e);
+  const[r,c]=cellFromXY(x,y);
+  if(r<0||r>=ROWS||c<0||c>=COLS) return;
+  const id=grid[r][c];
+  if(id!==-1&&!placed[id].deleted){
+    const t=placed[id];
+    unstamp(t);
+    drag={id,grabOffR:r-t.r,grabOffC:c-t.c,curR:t.r,curC:t.c,valid:true};
+    canvas.style.cursor='grabbing';
+  } else {
+    drag={id:-1,curR:r,curC:c};
+  }
+}
+
+window.addEventListener('mousemove',onMove);
+window.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+
+function onMove(e){
+  const[x,y]=canvasXY(e);
+  const[r,c]=cellFromXY(x,y);
+  hoverR=r; hoverC=c;
+  if(!drag){render();return;}
+  if(drag.id===-1){render();return;}
+  const t=placed[drag.id];
+  const nr=r-drag.grabOffR, nc=c-drag.grabOffC;
+  drag.curR=nr; drag.curC=nc;
+  drag.valid=canPlace(nr,nc,t.h,t.w,t.id);
+  render();
+}
+
+window.addEventListener('mouseup',onUp);
+window.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+function onUp(e){
+  canvas.style.cursor='crosshair';
+  if(!drag){render();return;}
+  if(drag.id===-1){
+    const[r,c]=[drag.curR,drag.curC];
+    drag=null;
+    if(r>=0&&r<ROWS&&c>=0&&c<COLS&&grid[r][c]===-1) placeTile(r,c);
+    render(); return;
+  }
+  const t=placed[drag.id];
+  const nr=drag.curR, nc=drag.curC;
+  const offGrid=nr<0||nc<0||nr+t.h>ROWS||nc+t.w>COLS;
+  if(offGrid){t.deleted=true;drag=null;hideMsg();updateStats();render();return;}
+  if(canPlace(nr,nc,t.h,t.w,t.id)){t.r=nr;t.c=nc;}
+  stamp(t,t.id);
+  drag=null; hideMsg(); updateStats(); render(); checkWin();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render(){
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const bg=dark?'#2C2C2A':'#E8E6E0';
+  const emptyfill=dark?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.5)';
+  const gridcol=dark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+  for(let r=0;r<ROWS;r++)
+    for(let c=0;c<COLS;c++)
+      if(grid[r][c]===-1){ctx.fillStyle=emptyfill;ctx.fillRect(c*S+1,r*S+1,S-2,S-2);}
+
+  placed.forEach(t=>{
+    if(t.deleted) return;
+    if(drag&&drag.id===t.id) return;
+    drawTile(t.r,t.c,t.h,t.w,groups[t.gIdx],1.0);
+  });
+
+  if(!drag){
+    const{h:th,w:tw}=effectiveDims(curGroupIdx,curOrientation);
+    if(hoverR>=0&&hoverC>=0&&hoverR<ROWS&&hoverC<COLS&&hoverR+th<=ROWS&&hoverC+tw<=COLS){
+      const limitOk=canAddGroup(curGroupIdx);
+      const fits=canPlace(hoverR,hoverC,th,tw)&&limitOk;
+      ctx.fillStyle=fits?'rgba(29,158,117,0.22)':'rgba(226,75,74,0.16)';
+      ctx.strokeStyle=fits?'#0F6E56':'#A32D2D';
+      ctx.lineWidth=1.5;
+      const x=hoverC*S+2,y=hoverR*S+2,pw=tw*S-4,ph=th*S-4;
+      ctx.beginPath();ctx.roundRect(x,y,pw,ph,4);ctx.fill();ctx.stroke();
+    }
+  }
+
+  if(drag&&drag.id!==-1){
+    const t=placed[drag.id];
+    const nr=drag.curR,nc=drag.curC;
+    if(!(nr<0||nc<0||nr+t.h>ROWS||nc+t.w>COLS))
+      drawTile(nr,nc,t.h,t.w,groups[t.gIdx],drag.valid?0.75:0.4,true);
+  }
+
+  ctx.strokeStyle=gridcol; ctx.lineWidth=0.5;
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*S);ctx.lineTo(w,r*S);ctx.stroke();}
+  for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*S,0);ctx.lineTo(c*S,h);ctx.stroke();}
+}
+
+function drawTile(r,c,h,w,g,alpha,dragging=false){
+  ctx.globalAlpha=alpha;
+  const x=c*S+2,y=r*S+2,tw=w*S-4,th=h*S-4;
+  ctx.fillStyle=g.fill;
+  ctx.strokeStyle=(dragging&&alpha<0.5)?'#A32D2D':g.stroke;
+  ctx.lineWidth=dragging?2:1.5;
+  ctx.beginPath();ctx.roundRect(x,y,tw,th,4);ctx.fill();ctx.stroke();
+  if(tw>22&&th>12){
+    ctx.fillStyle=g.stroke;
+    ctx.font=`${Math.min(11,S/3.2)}px system-ui,sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(g.label,x+tw/2,y+th/2);
+  }
+  ctx.globalAlpha=1;
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function maybeCloseModal(e,id){if(e.target===document.getElementById(id)) closeModal(id);}
+
+// ── Settings panel ─────────────────────────────────────────────────────────
+function openSettings(){
+  buildSettingsEditor();
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+function maybeCloseSettings(e){
+  if(e.target===document.getElementById('settings-overlay')) closeSettings();
+}
+
+function buildSettingsEditor(){
+  const ed=document.getElementById('groups-editor');
+  ed.innerHTML='';
+  groups.forEach((g,i)=>{
+    const isSquare=g.rows===g.cols;
+    const section=document.createElement('div');
+    section.style.cssText='background:#f8f7f4;border-radius:8px;padding:10px 12px;margin-bottom:10px;border:0.5px solid #e8e6e0';
+
+    const header=document.createElement('div');
+    header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+    const preview=document.createElement('span');
+    const pw=Math.min(48,g.cols*16), ph=Math.min(30,g.rows*16);
+    preview.style.cssText=`display:inline-block;width:${pw}px;height:${ph}px;background:${g.fill};border:2px solid ${g.stroke};border-radius:3px;vertical-align:middle;margin-right:8px`;
+    const title=document.createElement('span');
+    title.style.cssText='font-size:13px;font-weight:600;color:#2C2C2A';
+    title.textContent=g.label;
+    const leftSide=document.createElement('div');
+    leftSide.style.cssText='display:flex;align-items:center;gap:0';
+    leftSide.appendChild(preview);leftSide.appendChild(title);
+    header.appendChild(leftSide);
+    if(groups.length>1){
+      const del=document.createElement('button');
+      del.className='del-btn';del.textContent='Remove';
+      del.onclick=()=>removeGroup(i);
+      header.appendChild(del);
+    }
+    section.appendChild(header);
+
+    function row(fields){
+      const r=document.createElement('div');
+      r.className='group-row';
+      fields.forEach(f=>{
+        const fg=document.createElement('div');
+        fg.className='field-group';
+        const lbl=document.createElement('div');
+        lbl.className='field-label';lbl.textContent=f.label;
+        fg.appendChild(lbl);
+        const inp=document.createElement('input');
+        inp.type=f.type||'number';
+        if(f.type==='color'){inp.value=f.val;inp.dataset.key=f.key;inp.dataset.idx=i;}
+        else{inp.value=f.val;inp.min=f.min||1;inp.max=f.max||99;inp.dataset.key=f.key;inp.dataset.idx=i;}
+        inp.id=`se-${i}-${f.key}`;
+        fg.appendChild(inp);
+        r.appendChild(fg);
+      });
+      section.appendChild(r);
+    }
+
+    row([
+      {label:'Height',key:'rows',val:g.rows,min:1,max:10},
+      {label:'Width',key:'cols',val:g.cols,min:1,max:10},
+      {label:'Max tiles',key:'limit',val:g.limit,min:1,max:999},
+    ]);
+    row([
+      {label:'Fill color',key:'fill',val:g.fill,type:'color'},
+      {label:'Border color',key:'stroke',val:g.stroke,type:'color'},
+    ]);
+
+    ed.appendChild(section);
+  });
+}
+
+function removeGroup(i){
+  if(groups.length<=1) return;
+  groups.splice(i,1);
+  buildSettingsEditor();
+}
+
+function addGroup(){
+  const fills=['#EEEDFE','#FAECE7','#FBEAF0','#EAF3DE'];
+  const strokes=['#534AB7','#993C1D','#993556','#3B6D11'];
+  const idx=groups.length%4;
+  groups.push({label:'New',rows:1,cols:3,limit:10,fill:fills[idx],stroke:strokes[idx]});
+  buildSettingsEditor();
+}
+
+function applySettings(){
+  const newGroups=[];
+  for(let i=0;i<groups.length;i++){
+    const rows=parseInt(document.getElementById(`se-${i}-rows`)?.value)||1;
+    const cols=parseInt(document.getElementById(`se-${i}-cols`)?.value)||1;
+    const limit=parseInt(document.getElementById(`se-${i}-limit`)?.value)||10;
+    const fill=document.getElementById(`se-${i}-fill`)?.value||'#B5D4F4';
+    const stroke=document.getElementById(`se-${i}-stroke`)?.value||'#185FA5';
+    const label=rows===cols?`${rows}×${cols}`:(`${rows}×${cols}`);
+    newGroups.push({label,rows,cols,limit,fill,stroke});
+  }
+  groups=newGroups;
+  curGroupIdx=0; curOrientation=0;
+  closeSettings();
+  initGrid();
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+initGrid();
+</script>
+</body>
+</html>
